@@ -1,0 +1,21 @@
+
+# API Automation
+playwright
+
+# Test Framework
+pytest
+pytest-playwright
+
+# Reporting
+pytest-html
+allure-pytest
+
+# Configuration
+python-dotenv
+
+# JSON Schema Validation
+jsonschema
+
+
+# Faker
+Faker
