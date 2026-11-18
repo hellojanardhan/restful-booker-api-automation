@@ -1,13 +1,17 @@
 import pytest
 import base64
 import json
-from config.config import USERNAME, PASSWORD
+from config.config import BOOKER_USERNAME, BOOKER_PASSWORD
 from utils.data_generator import *
+from utils.logger import get_logger
 from pathlib import Path
+
+logger = get_logger(__name__)
 
 
 def test_create_auth_token(booking_helper):
-    response = booking_helper.create_auth_token(username=USERNAME, password=PASSWORD)
+    logger.info("Creating an auth token with valid credentials")
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
 
     assert response.ok
     assert response.status == 200
@@ -22,14 +26,14 @@ def test_create_auth_token(booking_helper):
     "username, password, expected_reason",
     [
         pytest.param(
-            USERNAME,
+            BOOKER_USERNAME,
             generate_password(),
             "Bad credentials",
             id="correct-username-wrong-password",
         ),
         pytest.param(
             generate_username(),
-            PASSWORD,
+            BOOKER_PASSWORD,
             "Bad credentials",
             id="wrong-username-correct-password",
         ),
@@ -44,6 +48,7 @@ def test_create_auth_token(booking_helper):
 def test_create_auth_token_with_invalid_credentials(
     booking_helper, username, password, expected_reason
 ):
+    logger.info("Checking auth rejection for invalid credentials")
     response = booking_helper.create_auth_token(username=username, password=password)
 
     assert response.ok
@@ -58,20 +63,21 @@ def test_create_auth_token_with_invalid_credentials(
 @pytest.mark.parametrize(
     "username,password",
     [
-        pytest.param("", PASSWORD, id="missing-username"),
-        pytest.param(USERNAME, "", id="missing-password"),
+        pytest.param("", BOOKER_PASSWORD, id="missing-username"),
+        pytest.param(BOOKER_USERNAME, "", id="missing-password"),
         pytest.param("", "", id="missing-both-credentials"),
         pytest.param(" ", " ", id="whitespace-only-credentials"),
     ],
 )
 def test_create_auth_token_with_missing_credentials(booking_helper, username, password):
+    logger.info("Checking auth rejection for missing credentials")
     response = booking_helper.create_auth_token(username=username, password=password)
 
     assert response.ok
     assert response.status == 200
     response_body = response.json()
 
-    print(f"response body : {response_body}")
+    logger.info("Auth rejection reason: %s", response_body.get("reason"))
 
     assert "reason" in response_body
     assert response_body["reason"] == "Bad credentials"
@@ -100,7 +106,7 @@ def test_create_auth_token_with_empty_request_body(booking_helper):
 def test_authorized_booking_operations(method, booking_helper):
 
     # Generate authentication token
-    response = booking_helper.create_auth_token(username=USERNAME, password=PASSWORD)
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
 
     assert response.status == 200
 
@@ -128,7 +134,7 @@ def test_authorized_booking_operations(method, booking_helper):
     booking_id = response.json()["bookingid"]
     assert booking_id > 0
 
-    print(f"Booking ID: {booking_id}")
+    logger.info("Created booking | ID: %s", booking_id)
 
     # Execute PUT / PATCH / DELETE
     response = booking_helper.perform_booking_operation(
@@ -155,16 +161,16 @@ def test_authorized_booking_operations(method, booking_helper):
 @pytest.mark.parametrize(
     "username, password",
     [
-        pytest.param(None, PASSWORD, id="username-null"),
-        pytest.param(123, PASSWORD, id="username-number"),
-        pytest.param(True, PASSWORD, id="username-boolean"),
-        pytest.param([], PASSWORD, id="username-array"),
-        pytest.param({}, PASSWORD, id="username-object"),
-        pytest.param(USERNAME, None, id="password-null"),
-        pytest.param(USERNAME, 123, id="password-number"),
-        pytest.param(USERNAME, True, id="password-boolean"),
-        pytest.param(USERNAME, [], id="password-array"),
-        pytest.param(USERNAME, {}, id="password-object"),
+        pytest.param(None, BOOKER_PASSWORD, id="username-null"),
+        pytest.param(123, BOOKER_PASSWORD, id="username-number"),
+        pytest.param(True, BOOKER_PASSWORD, id="username-boolean"),
+        pytest.param([], BOOKER_PASSWORD, id="username-array"),
+        pytest.param({}, BOOKER_PASSWORD, id="username-object"),
+        pytest.param(BOOKER_USERNAME, None, id="password-null"),
+        pytest.param(BOOKER_USERNAME, 123, id="password-number"),
+        pytest.param(BOOKER_USERNAME, True, id="password-boolean"),
+        pytest.param(BOOKER_USERNAME, [], id="password-array"),
+        pytest.param(BOOKER_USERNAME, {}, id="password-object"),
     ],
 )
 def test_create_auth_token_with_invalid_data_types(booking_helper, username, password):
@@ -190,8 +196,7 @@ def test_create_auth_token_with_invalid_data_types(booking_helper, username, pas
 def test_create_auth_token_with_malformed_json(booking_helper, payload):
     response = booking_helper.create_auth_token(payload=payload)
     assert response.status == 400
-    print("Status:", response.status)
-    print("Response:", response.text())
+    logger.info("Malformed JSON request returned HTTP %s", response.status)
 
     assert response.status not in [200] or "token" not in response.json()
 
@@ -199,10 +204,10 @@ def test_create_auth_token_with_malformed_json(booking_helper, payload):
 @pytest.mark.parametrize(
     "username, password",
     [
-        pytest.param("Admin", PASSWORD, id="username-title-case"),
-        pytest.param("ADMIN", PASSWORD, id="username-uppercase"),
-        pytest.param(USERNAME, "PASSWORD123", id="password-uppercase"),
-        pytest.param(USERNAME, "Password123", id="password-title-case"),
+        pytest.param("Admin", BOOKER_PASSWORD, id="username-title-case"),
+        pytest.param("ADMIN", BOOKER_PASSWORD, id="username-uppercase"),
+        pytest.param(BOOKER_USERNAME, "PASSWORD123", id="password-uppercase"),
+        pytest.param(BOOKER_USERNAME, "Password123", id="password-title-case"),
     ],
 )
 def test_create_auth_token_with_case_sensitive_username_and_password(
@@ -213,7 +218,7 @@ def test_create_auth_token_with_case_sensitive_username_and_password(
 
     response_body = response.json()
 
-    print(response_body)
+    logger.info("Auth rejection reason: %s", response_body.get("reason"))
 
     assert "reason" in response_body
     assert response_body["reason"] == "Bad credentials"
@@ -230,7 +235,7 @@ def test_reuse_valid_auth_token_across_multiple_bookings(booking_helper):
     assert booking_a_response_data["bookingid"] > 0
     booking_id_a = booking_a_response_data["bookingid"]
     booking_a = booking_a_response_data["booking"]
-    print(f"First Booking Response is {booking_a_response_data}")
+    logger.info("Created first booking with ID %s", booking_id_a)
     assert booking_a["firstname"] == payload_a["firstname"]
     assert booking_a["lastname"] == payload_a["lastname"]
 
@@ -253,7 +258,7 @@ def test_reuse_valid_auth_token_across_multiple_bookings(booking_helper):
     assert booking_b["booking"]["lastname"] == payload_b["lastname"]
 
     # Create Auth token
-    response = booking_helper.create_auth_token(username=USERNAME, password=PASSWORD)
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
 
     assert response.status == 200
 
@@ -295,7 +300,7 @@ def test_reuse_valid_auth_token_across_multiple_bookings(booking_helper):
 def test_authorized_put_with_http_basic_auth(booking_helper):
 
     # Generate Basic Authentication credentials
-    credentials = f"{USERNAME}:{PASSWORD}"
+    credentials = f"{BOOKER_USERNAME}:{BOOKER_PASSWORD}"
 
     encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
 
@@ -337,3 +342,329 @@ def test_authorized_put_with_http_basic_auth(booking_helper):
 
     assert updated_response["firstname"] == updated_payload["firstname"]
     assert updated_response["lastname"] == updated_payload["lastname"]
+
+
+def test_token_in_authorization_header_is_rejected(booking_helper):
+
+    # Creating access token
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body['token']
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    headers = {
+        "Content-Type" : "application/json",
+        "Authorization" : f"Bearer {token}"
+    }
+
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload, headers=headers
+    )
+
+    assert update_response.status == 403
+
+def test_token_in_query_parameter_is_rejected(booking_helper):
+    # Creating access token
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body['token']
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    params = {
+        "token" : f"{token}"
+    }
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload, params = params
+    )
+
+    assert update_response.status == 403
+
+
+def test_token_in_json_body_is_rejected(booking_helper):
+    # Creating access token
+    response = booking_helper.create_auth_token(username=BOOKER_USERNAME, password=BOOKER_PASSWORD)
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body['token']
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    payload["token"] = token
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload
+    )
+
+    assert update_response.status == 403
+
+
+def test_token_cookie_name_case_variation_is_rejected(booking_helper):
+    # Creating access token
+    response = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME, password=BOOKER_PASSWORD
+    )
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body["token"]
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    headers = {
+        "Content-Type" : "application/json",
+        "Cookie" : f"Token={token}"
+    }
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload, headers=headers
+    )
+
+    assert update_response.status == 403
+
+
+def test_token_cookie_with_extra_unrelated_cookies(booking_helper):
+    # Creating access token
+    response = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME, password=BOOKER_PASSWORD
+    )
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body["token"]
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    headers = {
+        "Content-Type" : "application/json",
+        "Cookie" : f"token={token};session_id=abc123"
+    }
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload,
+        headers = headers
+    )
+
+    assert update_response.status == 200
+
+
+def test_duplicate_token_cookie_with_same_value_is_accepted(booking_helper):
+    # Creating access token
+    response = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME, password=BOOKER_PASSWORD
+    )
+
+    assert response.ok
+    assert response.status == 200
+
+    response_body = response.json()
+    logger.info(
+        "Auth response status %s; token present: %s",
+        response.status,
+        bool(response_body.get("token")),
+    )
+    assert "token" in response_body
+    assert response_body["token"]
+
+    token = response_body["token"]
+
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+    assert response.ok
+    assert response.status == 200
+    response_body = response.json()
+    assert response_body["bookingid"] > 0
+    bookingId = response_body["bookingid"]
+
+    headers = {
+        "Content-Type": "application/json",
+        "Cookie": f"token={token};token={token}",
+    }
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId, payload=payload, headers=headers
+    )
+
+    assert update_response.status == 200
+
+
+def test_token_cookie_with_surrounding_whitespace_is_accepted(booking_helper):
+    # Create token
+    response = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME, password=BOOKER_PASSWORD
+    )
+    assert response.status == 200
+    token = response.json()["token"]
+
+    # Create booking
+    payload = read_json("booking_data.json")
+    response = booking_helper.create_booking(payload)
+
+    assert response.status == 200
+    bookingId = response.json()["bookingid"]
+
+    headers = {
+    "Content-Type": "application/json",
+    "Cookie": f"token=   {token}   ",
+}
+
+    # Before the security attempt
+    original_booking = booking_helper.get_booking_by_id(bookingId).json()
+
+    # Send token with whitespace
+    update_response = booking_helper.update_booking(
+        bookingId=bookingId,
+        payload=payload,
+        headers=headers
+    )
+
+    assert update_response.status == 200
+
+    # Verify booking remains unchanged
+    final_booking = booking_helper.get_booking_by_id(bookingId).json()
+
+    assert final_booking == original_booking
+
+def test_old_and_new_tokens_validity_after_generating_second_token(booking_helper):
+
+    # Generate first token
+    response1 = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME,
+        password=BOOKER_PASSWORD
+    )
+
+    assert response1.status == 200
+    token1 = response1.json()["token"]
+
+    logger.info("First token generated successfully")
+
+    # Generate second token
+    response2 = booking_helper.create_auth_token(
+        username=BOOKER_USERNAME,
+        password=BOOKER_PASSWORD
+    )
+
+    assert response2.status == 200
+    token2 = response2.json()["token"]
+
+    logger.info("Second token generated successfully")
+
+    # Create booking
+    payload = read_json("booking_data.json")
+
+    create_response = booking_helper.create_booking(payload)
+
+    assert create_response.status == 200
+
+    booking_id = create_response.json()["bookingid"]
+
+    logger.info("Created booking | ID: %s", booking_id)
+
+    # Test first/old token
+    old_token_response = booking_helper.update_booking(
+        bookingId=booking_id,
+        payload=payload,
+        token=token1
+    )
+
+    logger.info(
+        "Old token | HTTP %s",
+        old_token_response.status
+    )
+
+    # Test second/new token
+    new_token_response = booking_helper.update_booking(
+        bookingId=booking_id,
+        payload=payload,
+        token=token2
+    )
+
+    logger.info(
+        "New token | HTTP %s",
+        new_token_response.status
+    )
+
+    assert old_token_response.status == 200
+    assert new_token_response.status == 200

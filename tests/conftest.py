@@ -6,6 +6,40 @@ from pathlib import Path
 from playwright.sync_api import Playwright
 from utils.rest_helper import RestHelper
 from utils.booking_helper import BookingHelper
+from utils.logger import get_logger
+
+logger = get_logger("TestRunner")
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_runtest_logstart(nodeid, location):
+    print()
+    logger.info("START | %s", nodeid.rsplit("::", 1)[-1])
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_runtest_logreport(report):
+
+    if report.passed and report.when == "call":
+        print()
+        logger.info("PASS | %s", report.nodeid.rsplit("::", 1)[-1])
+
+    elif report.failed:
+        print()
+        logger.error(
+            "FAIL | %s | %s",
+            report.nodeid.rsplit("::", 1)[-1],
+            report.when,
+        )
+
+    elif report.skipped:
+        print()
+        logger.warning(
+            "SKIP | %s | %s",
+            report.nodeid.rsplit("::", 1)[-1],
+            report.when,
+        )
+
 
 # -------------------------------
 # API Request Context Fixture

@@ -34,10 +34,14 @@ class BookingHelper:
 
         return response
 
-    def get_booking_by_id(self, bookingId):
-        headers = {"Content-Type": "application/json"}
+
+    def get_booking_by_id(self, bookingId, headers=None):
+
+        if headers is None:
+            headers = {"Content-Type": "application/json"}
+
         response = self.rest_helper.execute(
-            method="get", endpoint=GET_BOOKING.format(booking_id=bookingId)
+            method="GET", endpoint=GET_BOOKING.format(booking_id=bookingId), headers=headers
         )
 
         return response
@@ -53,19 +57,22 @@ class BookingHelper:
 
         return response
 
+    def update_booking(
+        self, token=None, bookingId=None, payload=None, headers=None, params=None
+    ):
 
-    def update_booking(self, token=None, bookingId=None, payload=None, headers=None):
         if headers is None:
             headers = {"Content-Type": "application/json"}
 
-            if token is not None:
-                headers["Cookie"] = f"token={token}"
+        if token is not None:
+            headers["Cookie"] = f"token={token}"
 
         response = self.rest_helper.execute(
             method="PUT",
             endpoint=UPDATE_BOOKING.format(booking_id=bookingId),
             data=payload,
             headers=headers,
+            params=params,
         )
 
         return response
