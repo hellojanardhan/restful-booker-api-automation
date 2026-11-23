@@ -59,9 +59,9 @@ jobs:
 
       - name: Run all tests
         env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
-          BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+          BASE_URL: 'https://restful-booker.herokuapp.com'
+          BOOKER_USERNAME: 'admin'
+          BOOKER_PASSWORD: 'password123'
         run: |
           pytest -v --html="$GITHUB_WORKSPACE/report.html" --self-contained-html
 
