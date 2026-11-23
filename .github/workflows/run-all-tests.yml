@@ -52,7 +52,7 @@ jobs:
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
         run: |
-          python -c "import os; from urllib.parse import urlsplit; u=urlsplit(os.getenv('BASE_URL', '').strip()); print('Scheme valid:', u.scheme in ('http', 'https')); print('Host present:', bool(u.hostname)); print('URL valid:', u.scheme in ('http', 'https') and bool(u.hostname))"
+          python -c "import os; from urllib.parse import urlsplit; value=os.getenv('BASE_URL', '').strip(); u=urlsplit(value); valid=u.scheme in ('http', 'https') and bool(u.hostname); print('BASE_URL valid:', valid); raise SystemExit(0 if valid else 'BASE_URL must be an absolute HTTP(S) URL; update the GitHub Actions BASE_URL secret')"
       - name: Running all tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
