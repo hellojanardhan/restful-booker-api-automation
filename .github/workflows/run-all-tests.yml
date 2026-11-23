@@ -39,6 +39,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verify environment variables
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+          BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+        run: |
+          python -c "import os; print('BASE_URL:', bool(os.getenv('BASE_URL')))"
+          python -c "import os; print('USERNAME:', bool(os.getenv('BOOKER_USERNAME')))"
+          python -c "import os; print('PASSWORD:', bool(os.getenv('BOOKER_PASSWORD')))"
       - name: Running all tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
