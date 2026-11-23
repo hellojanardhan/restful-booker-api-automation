@@ -47,8 +47,8 @@ jobs:
 
       - name: Verify environment variables
         env:
-          BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
-          BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+          BOOKER_USERNAME: 'admin'
+          BOOKER_PASSWORD: 'password123'
         run: |
           python -c "import os; print('BASE_URL:', bool(os.getenv('BASE_URL')))"
           python -c "import os; print('USERNAME:', bool(os.getenv('BOOKER_USERNAME')))"
