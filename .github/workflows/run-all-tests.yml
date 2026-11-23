@@ -1,5 +1,5 @@
 
-name: Running all tests
+name: Running all Tests
 
 on:
   push:
