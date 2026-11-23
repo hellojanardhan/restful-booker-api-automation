@@ -43,7 +43,7 @@ Use a marker that is declared in `pytest.ini` or applied to a test. For example,
 
 ## Workflow example
 
-This example shows a test workflow with push, pull-request, and manual triggers. Store credentials in repository secrets rather than in the workflow file.
+This example runs on every push to `main` and every listed pull-request event, regardless of which files changed. Omitting `paths` avoids filtering out changes to documentation or other files. Store credentials in repository secrets rather than in the workflow file.
 
 ```yaml
 name: API tests
@@ -51,12 +51,6 @@ name: API tests
 on:
   push:
     branches: [main]
-    paths:
-      - "tests/**"
-      - "config/**"
-      - "requirements.txt"
-      - "pytest.ini"
-      - ".github/workflows/**"
   pull_request:
     branches: [main]
   workflow_dispatch:
