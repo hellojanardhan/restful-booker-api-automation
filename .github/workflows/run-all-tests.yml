@@ -56,15 +56,31 @@ jobs:
       - name: Validate API Base URL
         run: |
           python -c "import os; from urllib.parse import urlsplit; value=os.getenv('BASE_URL', '').strip(); u=urlsplit(value); valid=u.scheme in ('http', 'https') and bool(u.hostname); print('BASE_URL valid:', valid); raise SystemExit(0 if valid else 'BASE_URL must be an absolute HTTP(S) URL; check the workflow job environment')"
-      - name: Running all tests
+
+      - name: Run all tests
         env:
+          BASE_URL: ${{ secrets.BASE_URL }}
           BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
           BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
-        run: pytest -v
+        run: |
+          pytest -v --html="$GITHUB_WORKSPACE/report.html" --self-contained-html
+
+      - name: Check HTML report
+        if: always()
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/report.html" ]; then
+            echo "HTML report generated successfully"
+            ls -lh "$GITHUB_WORKSPACE/report.html"
+          else
+            echo "HTML report was not generated"
+          fi
+
       - name: Upload HTML Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-html-report
-          path: report.html
+          path: ${{ github.workspace }}/report.html
           retention-days: 7
+          if-no-files-found: warn
+
