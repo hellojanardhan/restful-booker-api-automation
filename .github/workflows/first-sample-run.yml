@@ -1,0 +1,22 @@
+name: First Sample Run
+on:
+  push:
+  pull_request:
+    types: 
+    - opened
+    - synchronize
+    - reopened
+    branches:
+      - main
+    paths:
+      - 'tests/'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Display message
+        run: echo 'Executing the tests'
+      - name: List test files
+        run: ls -R tests/
