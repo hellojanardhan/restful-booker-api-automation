@@ -1,0 +1,82 @@
+
+name: Running all tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tests/**'
+      - 'config/**'
+      - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/**'
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'tests/**'
+      - 'config/**'
+      - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/**'
+
+  workflow_dispatch:
+
+jobs:
+  all_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      BASE_URL: https://restful-booker.herokuapp.com
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify environment variables
+        run: |
+          python -c "import os; names=['BASE_URL','BOOKER_USERNAME','BOOKER_PASSWORD']; [print(f'{n}: {bool(os.getenv(n))}') for n in names]"
+
+      - name: Validate API Base URL
+        run: |
+          python -c "import os; from urllib.parse import urlsplit; u=urlsplit(os.environ['BASE_URL'].strip()); valid=u.scheme in ('http','https') and bool(u.hostname); print('BASE_URL valid:', valid); raise SystemExit(0 if valid else 1)"
+
+      - name: Run all tests
+        run: |
+          pytest -v --html=report.html --self-contained-html
+
+      - name: Check HTML report
+        if: always()
+        run: |
+          if [ -f report.html ]; then
+            echo "HTML report generated successfully"
+            ls -lh report.html
+          else
+            echo "HTML report was not generated"
+          fi
+
+      - name: Upload HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-report
+          path: report.html
+          retention-days: 7
+          if-no-files-found: warn
