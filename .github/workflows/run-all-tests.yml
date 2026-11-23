@@ -48,6 +48,11 @@ jobs:
           python -c "import os; print('BASE_URL:', bool(os.getenv('BASE_URL')))"
           python -c "import os; print('USERNAME:', bool(os.getenv('BOOKER_USERNAME')))"
           python -c "import os; print('PASSWORD:', bool(os.getenv('BOOKER_PASSWORD')))"
+      - name: Validate API Base URL
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          python -c "import os; from urllib.parse import urlsplit; u=urlsplit(os.getenv('BASE_URL', '').strip()); print('Scheme valid:', u.scheme in ('http', 'https')); print('Host present:', bool(u.hostname)); print('URL valid:', u.scheme in ('http', 'https') and bool(u.hostname))"
       - name: Running all tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
