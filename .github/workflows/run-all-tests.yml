@@ -8,6 +8,8 @@ on:
       - 'tests/**'
       - 'config/**'
       - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/**'
 
   pull_request:
     types:
@@ -18,12 +20,16 @@ on:
       - 'tests/**'
       - 'config/**'
       - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/**'
 
   workflow_dispatch:
 
 jobs:
   all_tests:
     runs-on: ubuntu-latest
+    env:
+      BASE_URL: https://restful-booker.herokuapp.com
 
     steps:
       - name: Checkout repository
@@ -41,7 +47,6 @@ jobs:
 
       - name: Verify environment variables
         env:
-          BASE_URL: ${{ secrets.BASE_URL }}
           BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
           BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
         run: |
@@ -49,13 +54,10 @@ jobs:
           python -c "import os; print('USERNAME:', bool(os.getenv('BOOKER_USERNAME')))"
           python -c "import os; print('PASSWORD:', bool(os.getenv('BOOKER_PASSWORD')))"
       - name: Validate API Base URL
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
         run: |
-          python -c "import os; from urllib.parse import urlsplit; value=os.getenv('BASE_URL', '').strip(); u=urlsplit(value); valid=u.scheme in ('http', 'https') and bool(u.hostname); print('BASE_URL valid:', valid); raise SystemExit(0 if valid else 'BASE_URL must be an absolute HTTP(S) URL; update the GitHub Actions BASE_URL secret')"
+          python -c "import os; from urllib.parse import urlsplit; value=os.getenv('BASE_URL', '').strip(); u=urlsplit(value); valid=u.scheme in ('http', 'https') and bool(u.hostname); print('BASE_URL valid:', valid); raise SystemExit(0 if valid else 'BASE_URL must be an absolute HTTP(S) URL; check the workflow job environment')"
       - name: Running all tests
         env:
-          BASE_URL: ${{ secrets.BASE_URL }}
           BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
           BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
         run: pytest -v
