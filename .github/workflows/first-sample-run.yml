@@ -1,6 +1,13 @@
 name: First Sample Run
 on:
   push:
+    branches:
+      - main
+    paths:
+    - 'tests/**'
+    - 'config/**'
+    - 'requirements.txt'
+    - 'pytest.ini'
   pull_request:
     types: 
     - opened
@@ -9,7 +16,10 @@ on:
     branches:
       - main
     paths:
-      - 'tests/'
+      - 'tests/**'
+      - 'config/**'
+      - 'requirements.txt'
+      - 'pytest.ini'
 jobs:
   test:
     runs-on: ubuntu-latest
