@@ -1,6 +1,7 @@
 """Pytest fixtures and hooks for the Restful Booker test suite."""
 
 import pytest
+import os
 import subprocess
 import shutil
 from pathlib import Path
@@ -89,20 +90,32 @@ def pytest_sessionstart(session):
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     """Generate the Allure HTML report after the test session finishes."""
+
     print("\nGenerating Allure report...")
 
     try:
+        allure_executable = shutil.which("allure") or shutil.which("allure.bat")
+
+        if not allure_executable:
+            logger.error("Allure CLI is not installed or not available in PATH")
+            print("Allure CLI not found. Skipping report generation.")
+            return
+
+        command = [
+            allure_executable,
+            "generate",
+            "reports/allure-results",
+            "-o",
+            "reports/allure-report",
+            "--clean",
+        ]
+
+        # Windows requires cmd.exe to execute a .bat file.
+        if os.name == "nt":
+            command = ["cmd.exe", "/c"] + command
+
         result = subprocess.run(
-            [
-                "cmd.exe",
-                "/c",
-                "allure.bat",
-                "generate",
-                "reports/allure-results",
-                "-o",
-                "reports/allure-report",
-                "--clean",
-            ],
+            command,
             capture_output=True,
             text=True,
             check=False,
@@ -111,13 +124,15 @@ def pytest_sessionfinish(session, exitstatus):
 
         if result.returncode == 0:
             print("Allure report generated successfully!")
+            logger.info("Allure report generated successfully")
         else:
             print("Allure report generation failed!")
-            print(result.stderr)
+            logger.error("Allure CLI error: %s", result.stderr)
 
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as error:
         logger.exception("Allure report generation failed")
         print(f"Allure reporting error: {error}")
+
     except Exception as error:
         logger.exception("Unexpected Allure report generation error")
         print(f"Unexpected Allure reporting error: {error}")
