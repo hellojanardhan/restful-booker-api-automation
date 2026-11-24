@@ -1,96 +1,59 @@
-name: Full API Automation Pipeline
+  name: Python Matrix strategy
+  on:
+    push:
+      branches: [main]
+    pull_request:
+      types:
+        - opened
+        - synchronize
+        - reopened
+      branches: [main]
 
-on:
-  push:
-    branches:
-      - main
+  jobs:
+    matrix_tests:
+      name: Running API Tests 
+      strategy:
+        matrix:
+          python-version: ['3.10', '3.11', '3.12'] 
+      runs-on: ubuntu-latest
+      environment: QA
+      timeout-minutes: 20
+      
+      env:
+        BASE_URL: ${{vars.BASE_URL || secrets.BASE_URL}}
+        BOOKER_USERNAME: ${{secrets.BOOKER_USERNAME}}
+        BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
+      
+      steps:
+        # Step 1: Checkout repository
+        - name: Checkout Repository
+          uses: actions/checkout@v5
 
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - assigned
-    branches:
-      - main
+        # Step 2: Setup Python
+        - name: Setup Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: "3.12"
 
-  workflow_dispatch:
-
-jobs:
-  api_tests:
-    name: API Automation
-    runs-on: ubuntu-latest
-    environment: QA
-    timeout-minutes: 20
-
-    env:
-      BASE_URL: ${{ vars.BASE_URL }}
-      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
-      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
-
-    steps:
-      # Step 1: Checkout repository
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-
-      # Step 2: Setup Python
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # Step 3: Install dependencies
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # Step 4: Install Allure CLI
-      - name: Install Allure CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre
-          sudo npm install -g allure-commandline
-
-      # Step 5: Run API tests and generate reports
-      - name: Run API Tests
-        run: |
-          mkdir -p reports
-          pytest -v \
-            --alluredir=reports/allure-results \
-            --html=reports/report.html \
-            --self-contained-html
-
-      # Step 6: Verify HTML report
-      - name: Verify HTML Report
-        if: always()
-        run: |
-          if [ -f reports/report.html ]; then
-            echo "Pytest HTML report generated successfully"
-            ls -lh reports/report.html
-          else
-            echo "Pytest HTML report not found"
-          fi
-
-      # Step 7: Verify Allure report
-      - name: Verify Allure Report
-        if: always()
-        run: |
-          if [ -f reports/allure-report/index.html ]; then
-            echo "Allure HTML report generated successfully"
-            ls -lh reports/allure-report/index.html
-          else
-            echo "Allure HTML report not found"
-          fi
-
-      # Step 8: Upload reports
-      - name: Upload Test Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: API-Automation-Test-Reports
-          path: |
-            reports/report.html
-            reports/allure-report/
-          retention-days: 7
-          if-no-files-found: warn
+        # Step 3: Install dependencies
+        - name: Install Dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+        - name: Run API Tests
+          run: |
+            mkdir -p reports
+            pytest -v \
+              --alluredir=reports/allure-results \
+              --html=reports/report.html \
+              --self-contained-html
+        - name: Upload Test Reports
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: API-Automation-Test-Reports
+            path: |
+              reports/report.html
+              reports/allure-report/
+            retention-days: 7
+            if-no-files-found: warn
