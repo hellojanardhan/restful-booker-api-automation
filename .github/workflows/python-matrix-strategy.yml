@@ -1,0 +1,67 @@
+
+name: Python Matrix Strategy – Cross-Platform API Tests
+
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches: [main]
+
+jobs:
+  matrix_tests:
+    name: Running API Tests
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.11', '3.12']
+
+    environment: QA
+    timeout-minutes: 20
+
+    env:
+      BASE_URL: ${{ vars.BASE_URL || secrets.BASE_URL }}
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Step 2: Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Step 3: Install dependencies
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run API tests
+      - name: Run API Tests
+        run: |
+          python -c "from pathlib import Path; Path('reports').mkdir(exist_ok=True)"
+          pytest -v --alluredir=reports/allure-results --html=reports/report.html --self-contained-html
+
+      # Step 5: Upload test reports
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: API-Reports-${{ matrix.os }}-Python-${{ matrix.python-version }}
+          path: |
+            reports/report.html
+            reports/allure-results/
+          retention-days: 7
+          if-no-files-found: warn
