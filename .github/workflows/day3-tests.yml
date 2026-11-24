@@ -1,0 +1,50 @@
+name: Day 3 - Smoke and Regression Tests
+on: 
+  push:
+    branches: [main]
+  pull_request:
+    types: 
+    - opened
+    - synchronize
+    - reopened
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  smoke_tests:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: https://restful-booker.herokuapp.com
+      BOOKER_USERNAME: ${{secrets.BOOKER_USERNANE}}
+      BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Execute smoke tests
+        run: python -m smoke -v
+  regression-tests:
+      name: Smoke tests
+      runs-on: ubuntu-latest
+      env:
+        BASE_URL: https://restful-booker.herokuapp.com
+        BOOKER_USERNAME: ${{secrets.BOOKER_USERNANE}}
+        BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
+      steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v5
+        - name: Setup Python
+          uses: actions/setup-python@v5
+        - name: Install Dependencies
+          run: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+        - name: Execute smoke tests
+          run: python -m smoke -v
+    
+    
