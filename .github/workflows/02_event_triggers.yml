@@ -27,11 +27,6 @@ jobs:
     event_triggers:
         name: Using Ubuntu Latest GitHub-hosted Runner
         runs-on: ubuntu-latest
-        
-        env:
-            BASE_URL: ${{ secrets.BASE_URL }}
-            BOOKER_USERNAME: ${{secrets.BOOKER_USERNAME}}
-            BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
         steps:  
             - name: Checkout repository
               uses: actions/checkout@v5
@@ -46,5 +41,5 @@ jobs:
                 pip install --upgrade pip
                 pip install -r requirements.txt
 
-
+            
             
