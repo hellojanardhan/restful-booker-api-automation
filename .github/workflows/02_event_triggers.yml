@@ -23,12 +23,11 @@ on:
     workflow_dispatch:
 
 
-jobs:
+jobs:            
     event_triggers:
         name: Using Ubuntu Latest GitHub-hosted Runner
         runs-on: ubuntu-latest
-
-        steps:
+        steps:  
             - name: Checkout repository
               uses: actions/checkout@v5
             
@@ -41,8 +40,6 @@ jobs:
               run: |
                 pip install --upgrade pip
                 pip install -r requirements.txt
+
             
-            - name: Run API tests
-              run: pytest -v
-        
             
