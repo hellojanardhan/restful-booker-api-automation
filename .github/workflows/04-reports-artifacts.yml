@@ -1,66 +1,93 @@
+
+# Workflow name
 name: Pytest HTML Reports and Artifacts Pipeline
+
+# Event triggers
 on:
-    push:
-        branches: 
-            - main
-        paths:
-            - 'tests/**'
-            - 'pytest.ini'
-            - 'requirements.txt'
-            - '.github/workflows/04-reports-artifacts.yml'
-    
-    pull_request:
-        types:
-            - opened
-            - synchronize
-            - reopened
-        
-        branches:
-            - main
-        
-        paths:
-            - 'tests/**'
-            - 'pytest.ini'
-            - 'requirements.txt'
-            - '.github/workflows/04-reports-artifacts.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'tests/**'
+      - 'pytest.ini'
+      - 'requirements.txt'
+      - '.github/workflows/04-reports-artifacts.yml'
 
-    workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+    paths:
+      - 'tests/**'
+      - 'pytest.ini'
+      - 'requirements.txt'
+      - '.github/workflows/04-reports-artifacts.yml'
 
-    
+  workflow_dispatch:
+
+# Job configuration
 jobs:
-    reports_artifacts:
-        name: Host is Ubuntu
-        runs-on: ubuntu-latest
-        env:
-            BASE_URL: ${{secrets.BASE_URL}}
-            BOOKER_USERNAME: ${{secrets.BOOKER_USERNAME}}
-            BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
-        
-        steps:
+  reports_artifacts:
+    name: Host is Ubuntu
+    runs-on: ubuntu-latest
 
-            - name: Checkout Repository
-              uses: actions/checkout@v5
-            
-            - name: Setup Python
-              uses: actions/setup-python@v5
-              with:
-                python-version: '3.12'
-            
-            - name: install Dependencies
-              run: |
-                pip install --upgrade pip
-                pip install -r requirements.txt
-            
-            - name: Run tests
-              run: |
-                mkdir reports
-                pytest -v --html=reports/report.html --self-contained-html
-            
-            - name: Upload artifacts
-              uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                name: pytest-html-report
-                path: reports/report.html
-                retention-days: 10
-                
+    # Environment variables from GitHub Secrets
+    env:
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      # Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Install dependencies
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Execute tests and generate HTML report
+      - name: Run Tests
+        run: |
+          mkdir -p reports
+          pytest -v --html=reports/report.html --self-contained-html
+
+      # Upload HTML report as an artifact
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-html-report
+          path: reports/report.html
+          retention-days: 10
+
+      # Download uploaded artifact
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          name: pytest-html-report
+          path: downloaded-artifacts
+
+      # Verify downloaded HTML report
+      - name: Verify Downloaded Report
+        if: always()
+        run: |
+          if [ -s downloaded-artifacts/report.html ]; then
+            echo "SUCCESS: HTML report downloaded successfully"
+            ls -lh downloaded-artifacts/report.html
+          else
+            echo "ERROR: HTML report not found or empty"
+            exit 1
+          fi
