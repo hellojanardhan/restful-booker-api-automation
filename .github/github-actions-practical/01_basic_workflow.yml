@@ -1,0 +1,25 @@
+name: Basic Workflow
+on:
+  workflow_dispatch:
+jobs:
+  manual_execution: 
+    name: Using Ubuntu Latest GitHub-hosted Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Python Version
+        run: python --version
+
+      - name: Current working directory
+        run: pwd
+
+      - name: Repository Files
+        run: ls -ltr
