@@ -1,52 +1,87 @@
+
+# Name of the GitHub Actions workflow
 name: Python Pytest CI Pipeline
+
+# Configure workflow execution triggers
 on:
+
+    # Trigger workflow when code is pushed to main
     push:
         branches:
             - main
+
+        # Execute only when the specified files or folders change
         paths:
             - 'tests/**'
             - 'pytest.ini'
             - 'requirements.txt'
             - '.github/workflows/03-python-pytest.yml'
-        
+
+    # Trigger workflow when a Pull Request targets main
     pull_request:
+
+        # Specify Pull Request activity types
         types:
             - opened
             - synchronize
             - reopened
+
+        # Execute only when the specified files change
         paths:
             - 'tests/**'
             - 'pytest.ini'
             - 'requirements.txt'
             - '.github/workflows/03-python-pytest.yml'
+
+        # Target branch for Pull Requests
         branches:
             - main
 
+    # Allow manual execution from GitHub Actions
     workflow_dispatch:
 
+# Define jobs to be executed in this workflow
 jobs:
+
+    # Job ID
     pytest_tests:
+
+        # Define environment variables for the entire job
         env:
-            BASE_URL: ${{secrets.BASE_URL}}
-            BOOKER_USERNAME: ${{secrets.BOOKER_USERNAME}}
-            BOOKER_PASSWORD: ${{secrets.BOOKER_PASSWORD}}
+            # Read BASE_URL from GitHub repository secrets
+            BASE_URL: ${{ secrets.BASE_URL }}
+
+            # Read Booker username from GitHub repository secrets
+            BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+
+            # Read Booker password from GitHub repository secrets
+            BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+        # Display name of the job in GitHub Actions
         name: Using Ubuntu Latest GitHub-hosted Runner
 
+        # Select the operating system for the runner
         runs-on: ubuntu-latest
+
+        # Define the sequence of execution steps
         steps:
+
+            # Step 1: Download repository code into the runner
             - name: Checkout repository
               uses: actions/checkout@v5
-        
+
+            # Step 2: Configure the required Python version
             - name: Setup Python
               uses: actions/setup-python@v5
               with:
                 python-version: '3.12'
-            
+
+            # Step 3: Upgrade pip and install project dependencies
             - name: Install dependencies
               run: |
                     pip install --upgrade pip
                     pip install -r requirements.txt
-            
+
+            # Step 4: Execute all tests using pytest
             - name: Run tests
               run: pytest -v
-        
