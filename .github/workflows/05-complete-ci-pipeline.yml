@@ -81,6 +81,7 @@ jobs:
           name: pytest-html-report
           path: reports/*.html
           retention-days: 7
+          if-no-files-found: error
 
       # Download the uploaded artifact from the same workflow run
       - name: Download Artifacts
