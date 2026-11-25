@@ -1,0 +1,195 @@
+
+name: Job Dependencies and Parallel Execution
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tests/**"
+      - "pytest.ini"
+      - "requirements.txt"
+      - ".github/workflows/06-job-dependencies.yml"
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+    paths:
+      - "tests/**"
+      - "pytest.ini"
+      - "requirements.txt"
+      - ".github/workflows/06-job-dependencies.yml"
+
+  workflow_dispatch:
+
+jobs:
+
+  # Job 1: Prepare common dependencies and upload them as an artifact
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Configure Python 3.12
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Download dependencies into the wheelhouse folder
+      - name: Download Dependencies
+        run: |
+          pip install --upgrade pip
+          pip download -r requirements.txt -d wheelhouse
+
+      # Upload downloaded dependencies as an artifact
+      - name: Upload Dependencies Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dependencies
+          path: wheelhouse/
+          retention-days: 1
+
+  # Job 2: Download dependencies and execute smoke tests
+  smoke_tests:
+    name: Running Smoke Tests
+    needs: setup
+    runs-on: ubuntu-latest
+
+    env:
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      # Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Configure Python 3.12
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Download dependencies artifact from setup job
+      - name: Download Dependencies Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dependencies
+          path: wheelhouse/
+
+      # Install dependencies from downloaded artifact
+      - name: Install Dependencies
+        run: |
+          pip install --no-index --find-links=wheelhouse -r requirements.txt
+
+      # Execute smoke tests and generate HTML report
+      - name: Run Smoke Tests
+        run: |
+          mkdir -p reports
+          pytest -v -m smoke --html=reports/smoke-tests-report.html --self-contained-html
+
+      # Upload smoke test report as an artifact
+      - name: Upload Smoke Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-report
+          path: reports/smoke-tests-report.html
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Job 3: Download dependencies and execute regression tests
+  regression_tests:
+    name: Running Regression Tests
+    needs: setup
+    runs-on: ubuntu-latest
+
+    env:
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      # Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Configure Python 3.12
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Download dependencies artifact from setup job
+      - name: Download Dependencies Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dependencies
+          path: wheelhouse/
+
+      # Install dependencies from downloaded artifact
+      - name: Install Dependencies
+        run: |
+          pip install --no-index --find-links=wheelhouse -r requirements.txt
+
+      # Execute regression tests and generate HTML report
+      - name: Run Regression Tests
+        run: |
+          mkdir -p reports
+          pytest -v -m regression --html=reports/regression-tests-report.html --self-contained-html
+
+      # Upload regression test report as an artifact
+      - name: Upload Regression Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-test-report
+          path: reports/regression-tests-report.html
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Job 4: Download both reports and verify their existence
+  download_reports:
+    name: Download and Verify Reports
+    needs:
+      - smoke_tests
+      - regression_tests
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download smoke test report
+      - name: Download Smoke Report
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-report
+          path: downloaded-reports/smoke
+
+      # Download regression test report
+      - name: Download Regression Report
+        uses: actions/download-artifact@v4
+        with:
+          name: regression-test-report
+          path: downloaded-reports/regression
+
+      # Verify both downloaded reports are present and non-empty
+      - name: Verify Downloaded Reports
+        run: |
+          if [ -s downloaded-reports/smoke/smoke-tests-report.html ] && \
+             [ -s downloaded-reports/regression/regression-tests-report.html ]; then
+            echo "SUCCESS: Both reports downloaded successfully"
+            ls -lh downloaded-reports/
+          else
+            echo "ERROR: One or both reports are missing or empty"
+            exit 1
+          fi
