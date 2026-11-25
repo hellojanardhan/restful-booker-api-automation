@@ -2,8 +2,9 @@
 # Workflow name
 name: Pytest HTML Reports and Artifacts Pipeline
 
-# Event triggers
+# Configure workflow event triggers
 on:
+  # Trigger when code is pushed to main
   push:
     branches:
       - main
@@ -13,6 +14,7 @@ on:
       - 'requirements.txt'
       - '.github/workflows/04-reports-artifacts.yml'
 
+  # Trigger when a pull request targets main
   pull_request:
     types:
       - opened
@@ -26,44 +28,47 @@ on:
       - 'requirements.txt'
       - '.github/workflows/04-reports-artifacts.yml'
 
+  # Allow manual workflow execution
   workflow_dispatch:
 
-# Job configuration
+# Configure jobs
 jobs:
   reports_artifacts:
     name: Host is Ubuntu
     runs-on: ubuntu-latest
 
-    # Environment variables from GitHub Secrets
+    # Configure environment variables using GitHub Secrets
     env:
       BASE_URL: ${{ secrets.BASE_URL }}
       BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
       BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
 
     steps:
-      # Checkout repository
+
+      # Checkout the repository code
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      # Setup Python
+      # Configure Python 3.12
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # Install dependencies
+      # Upgrade pip and install project dependencies
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Execute tests and generate HTML report
+      # Execute pytest and generate an HTML report
       - name: Run Tests
         run: |
           mkdir -p reports
           pytest -v --html=reports/report.html --self-contained-html
 
-      # Upload HTML report as an artifact
+      # Upload the generated HTML report as a GitHub Actions artifact
+      # Run this step even if the test execution fails
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -72,7 +77,7 @@ jobs:
           path: reports/report.html
           retention-days: 10
 
-      # Download uploaded artifact
+      # Download the uploaded artifact from the same workflow run
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         if: always()
@@ -80,14 +85,24 @@ jobs:
           name: pytest-html-report
           path: downloaded-artifacts
 
-      # Verify downloaded HTML report
+      # Verify that the downloaded HTML report exists and is not empty
       - name: Verify Downloaded Report
+        # Run this step even if a previous step fails
         if: always()
         run: |
+          # Check whether the downloaded report exists and contains data
           if [ -s downloaded-artifacts/report.html ]; then
+
+            # Print success message
             echo "SUCCESS: HTML report downloaded successfully"
+
+            # Display the downloaded report file size
             ls -lh downloaded-artifacts/report.html
+
           else
+            # Print error message if the report is missing or empty
             echo "ERROR: HTML report not found or empty"
+
+            # Fail the workflow
             exit 1
           fi
