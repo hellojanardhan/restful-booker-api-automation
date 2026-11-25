@@ -1,25 +1,6 @@
 name: First Sample Run
 on:
-  push:
-    branches:
-      - main
-    paths:
-    - 'tests/**'
-    - 'config/**'
-    - 'requirements.txt'
-    - 'pytest.ini'
-  pull_request:
-    types: 
-    - opened
-    - synchronize
-    - reopened
-    branches:
-      - main
-    paths:
-      - 'tests/**'
-      - 'config/**'
-      - 'requirements.txt'
-      - 'pytest.ini'
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest

@@ -2,33 +2,7 @@
 # Workflow name
 name: Pytest HTML Reports and Artifacts Pipeline
 
-# Configure workflow event triggers
 on:
-  # Trigger when code is pushed to main
-  push:
-    branches:
-      - main
-    paths:
-      - 'tests/**'
-      - 'pytest.ini'
-      - 'requirements.txt'
-      - '.github/workflows/04-reports-artifacts.yml'
-
-  # Trigger when a pull request targets main
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-    branches:
-      - main
-    paths:
-      - 'tests/**'
-      - 'pytest.ini'
-      - 'requirements.txt'
-      - '.github/workflows/04-reports-artifacts.yml'
-
-  # Allow manual workflow execution
   workflow_dispatch:
 
 # Configure jobs

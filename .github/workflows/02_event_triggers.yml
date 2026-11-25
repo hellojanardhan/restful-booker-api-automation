@@ -1,26 +1,6 @@
-name: Event Triggers
+name: Python Setup Demo (Manual Only)
 on:
-    push:
-        branches: 
-            - main
-        paths:
-            - 'tests/**'
-            - 'pytest.ini'
-            - 'requirements.txt'
-            - '.github/workflows/02_event_triggers.yml'        
-    pull_request:
-            types:
-                - opened
-                - synchronize
-                - reopened
-            branches:
-                - main
-            paths:
-                - 'tests/**'
-                - 'pytest.ini'
-                - 'requirements.txt'
-                - '.github/workflows/02_event_triggers.yml'    
-    workflow_dispatch:
+  workflow_dispatch:
 
 
 jobs:            

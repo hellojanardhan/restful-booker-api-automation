@@ -47,8 +47,8 @@ The objectives are to:
 - retain dynamic booking state across chained API calls;
 - isolate setup and cleanup for booking tests;
 - provide readable pytest, HTML, Allure, console, and file-based diagnostics;
-- exercise the suite through GitHub-hosted runners, pull requests, schedules,
-  and manual triggers.
+- exercise the suite on GitHub-hosted runners through one push/PR workflow and
+  optional manual workflow examples.
 
 Pytest discovers and executes tests. Fixtures create a function-scoped
 Playwright API request context and helper objects. `BookingHelper` implements
@@ -67,8 +67,9 @@ and responses.
 - API chaining and data-integrity checks across bookings.
 - pytest-html reports and Allure result collection.
 - Windows Allure HTML generation hook when the Allure CLI is installed.
-- Scheduled, push, pull-request, and manual GitHub Actions workflows.
-- Matrix execution and smoke/regression job patterns in implemented workflows.
+- One push/PR/manual primary workflow with separate smoke and regression jobs.
+- Manual-only workflow examples for reporting, event handling, matrices, and
+  job dependencies.
 
 ## Technology Stack
 
@@ -222,8 +223,9 @@ are `PERF_P95_MS=2000` and `PERF_MAX_MS=5000`.
 ### Test data and parametrization
 
 The baseline payload is `test_data/booking_data.json`. Dynamic values are
-generated with Faker or `random`. Test functions use `pytest.parametrize` for
-invalid credentials, IDs, headers, values, HTTP methods, and query filters.
+generated with Faker or `random`. Tests use the `@pytest.mark.parametrize`
+decorator for invalid credentials, IDs, headers, values, HTTP methods, and
+query filters.
 
 ### Assertions and response validation
 
@@ -304,8 +306,9 @@ table after a complete run and retain the command and execution date.
 
 ### Prerequisites
 
-- Python 3.11 or newer is practical for the workflows; local verification used
-  Python 3.11.8.
+- Python 3.10, 3.11, and 3.12 appear in the manual workflow examples. Local
+  verification used Python 3.11.8; compatibility across every listed version
+  has not been verified.
 - Git.
 - Network access to the configured Restful Booker environment.
 - Optional Allure CLI and Java for HTML report generation on Windows.
@@ -430,128 +433,93 @@ without redaction. Do not publish raw logs or reports containing test credential
 
 ## GitHub Actions CI/CD Integration
 
-### Workflow summary
+The repository contains one automatically triggered CI workflow and 17
+manual-only learning/demo workflows. This avoids launching overlapping test
+suites for the same push or pull request. Manual examples remain available from
+the GitHub Actions page using **Run workflow**.
 
-| Workflow | Trigger | Main purpose | Jobs | Reports/artifacts |
+### Primary push/PR pipeline
+
+| Workflow | Trigger | Runner/Python | Execution | Reports/artifacts |
 |---|---|---|---|---|
-| `01_basic_workflow.yml` | Manual | Environment and runner smoke check | `manual_execution` | None |
-| `02_event_triggers.yml` | Push/PR/manual | Trigger and setup demonstration | `event_triggers` | None |
-| `03-python-pytest.yml` | Push/PR/manual | Install dependencies and run pytest | `pytest_tests` | pytest console/report defaults |
-| `04-reports-artifacts.yml` | Push/PR/manual, filtered | Generate, upload, download, and verify pytest HTML | `reports_artifacts` | `pytest-html-report`, 10 days |
-| `05-complete-ci-pipeline.yml` | Push/PR, filtered | Run smoke/regression and verify both reports | `ci-pipeline` | `pytest-html-report`, 7 days |
-| `06-job-dependencies.yml` | Push/PR/manual, filtered | Dependency artifact plus parallel smoke/regression | `setup`, `smoke_tests`, `regression_tests`, `download_reports` | Dependency artifact; report artifacts, 7 days |
-| `Day_04.yml` | Push/PR/manual | Run suite and upload HTML | `api_tests` | `pytest-html-report`, 7 days |
-| `api-tests.yml` | Push/PR/manual | Full suite with pytest HTML and Allure | `api_tests` | `API-Automation-Test-Reports`, 7 days |
-| `cron-job.yml` | Daily 20:30 UTC + manual | Regression suite | `regression_tests` | No upload |
-| `cross_platform_api_tests.yml` | Push/PR | Matrix workflow cross-platform | `matrix_tests` | `API-Automation-Test-Reports`, 7 days |
-| `day3-tests.yml` | Push/PR/manual | Parallel smoke and regression jobs | `smoke_tests`, `regression_tests` | None |
-| `first-sample-run.yml` | Push/PR, filtered | Checkout and list test files | `test` | None |
-| `full_API_automation_pipeline.yml` | Push/PR | Matrix display plus Ubuntu test execution | `matrix_tests` | `API-Automation-Test-Reports`, 7 days |
-| `main.yml` | Push/PR/manual, filtered | Full suite, HTML verification/upload | `all_tests` | `pytest-html-report`, 7 days |
-| `matrix-tests.yml` | Push/PR | Ubuntu full-suite matrix-labelled run | `matrix_tests` | `API-Automation-Test-Reports`, 7 days |
-| `pr-validation.yml` | PR only | Smoke test and HTML report | `smoke_tests` | `smoke-test-report` |
-| `python-matrix-strategy.yml` | Push/PR | 2 OS × 2 Python versions | `matrix_tests` | Per-combination reports, 7 days |
-| `run-all-tests.yml` | Push/PR/manual | Full suite with hardcoded public URL and demo credentials | `all_tests` | `pytest-html-report`, 7 days |
+| `06-job-dependencies.yml` | Push to `main` and PR opened/synchronized/reopened targeting `main`, when configured test/config/data/workflow paths change; also manual dispatch | `ubuntu-latest`, Python 3.12 | `setup` downloads dependencies; `smoke_tests` and `regression_tests` run in parallel; `download_reports` depends on both | Wheelhouse artifact retained 1 day; each HTML report artifact retained 7 days; final job downloads and verifies both reports |
 
-### Individual workflows
+The setup job checks out the source, configures Python, downloads packages into
+`wheelhouse/`, and uploads that directory. The smoke and regression jobs each
+download the wheelhouse and install without contacting the package index. Both
+use `BASE_URL`, `BOOKER_USERNAME`, and `BOOKER_PASSWORD` from GitHub Secrets and
+run `pytest -v -m smoke` or `pytest -v -m regression`, respectively. Each test
+job uploads its HTML report with `if: always()`. The final job also has
+`if: always()`, downloads both report artifacts, and fails if a report is
+missing or empty. Test job failures remain visible in the overall workflow
+result; artifact steps attempt to preserve diagnostic reports.
 
-1. **`01_basic_workflow.yml` — Basic Workflow:** manual `workflow_dispatch`,
-   Ubuntu latest, Python 3.12, checkout, version check, working directory, and
-   repository file listing. It does not install dependencies or run tests.
+The push and pull-request path filters include `tests/`, `config/`, `utils/`,
+`test_data/`, `pytest.ini`, `requirements.txt`, and this primary workflow file.
+There is no scheduled trigger. A manual run can be started with
+`workflow_dispatch`.
 
-2. **`02_event_triggers.yml` — Event Triggers:** push/PR for `main` plus manual
-   dispatch, with path filters on tests, pytest config, requirements, and this
-   workflow. Ubuntu/Python 3.12 setup and dependency installation only.
+The workflow requires the three named GitHub Secrets to be configured. GitHub
+does not pass repository secrets to workflows from forked pull requests by
+default, so authenticated tests from forks need an appropriately secured
+alternative rather than exposure of privileged credentials.
 
-3. **`03-python-pytest.yml` — Python Pytest CI Pipeline:** push/PR/manual,
-   filtered for the test/config paths. Ubuntu, Python 3.12, requirements
-   installation, then `pytest -v`. Job secrets supply all three API variables.
+### Manual-only workflow examples
 
-4. **`04-reports-artifacts.yml` — Pytest HTML Reports and Artifacts Pipeline:**
-   push/PR/manual, filtered. Ubuntu/Python 3.12, full pytest run, HTML upload,
-   download from the same run, and a non-empty report verification. Artifact:
-   10-day retention.
+All workflows in this catalog are now triggered only by `workflow_dispatch`;
+their prior push, pull-request, or scheduled triggers were removed to prevent
+duplicate automatic runs. The YAML files are retained as examples and are not
+evidence that a workflow has been successfully executed.
 
-5. **`05-complete-ci-pipeline.yml` — Complete CI Pipeline:** filtered push/PR.
-   Smoke and regression reports run sequentially in one Ubuntu job. The
-   regression step is tied to dependency-install success, and uploads/downloads
-   both reports with `if: always()`. It fails report verification if either
-   file is missing or empty.
+| Workflow file | Demonstration |
+|---|---|
+| `01_basic_workflow.yml` | Ubuntu/Python 3.12 runner inspection; no dependency install or tests. |
+| `02_event_triggers.yml` | Python setup and dependency-install example; manual-only and does not run tests. |
+| `03-python-pytest.yml` | Python 3.12 setup and full `pytest -v` execution. |
+| `04-reports-artifacts.yml` | Full suite, HTML artifact upload/download, and non-empty report check; artifact retention is 10 days. |
+| `05-complete-ci-pipeline.yml` | Sequential smoke/regression report exercise and artifact verification. It is an example, not the primary pipeline. |
+| `Day_04.yml` | Full suite and HTML upload; uses `vars.BASE_URL` and credential secrets. |
+| `api-tests.yml` | Full suite, installs Java and Allure CLI, checks report paths, and uploads reports; uses the `QA` environment and `vars.BASE_URL`. |
+| `cron-job.yml` | Regression marker run. Despite the historical filename, it is no longer scheduled. |
+| `cross_platform_api_tests.yml` | Ubuntu/Windows × Python 3.11/3.12 matrix, HTML/Allure results, and per-combination artifacts. |
+| `day3-tests.yml` | Separate smoke and regression jobs on Ubuntu/Python 3.12. |
+| `first-sample-run.yml` | Checkout and list test files; it does not install Python dependencies or run tests. |
+| `full_API_automation_pipeline.yml` | Ubuntu matrix targeting Python 3.10/3.11/3.12; `setup-python` now uses the matrix version. |
+| `main.yml` | Full suite, HTML report check, and 7-day HTML artifact; uses the public service URL and credential secrets. |
+| `matrix-tests.yml` | Ubuntu/Python 3.12 full-suite report example. It is named accurately and is not a matrix. |
+| `pr-validation.yml` | Smoke tests, a separate report-generation step, and report artifact upload. |
+| `python-matrix-strategy.yml` | Ubuntu/Windows × Python 3.11/3.12 matrix and per-combination report artifacts. |
+| `run-all-tests.yml` | Full suite and HTML upload; demo credentials were replaced with GitHub Secrets. |
 
-6. **`06-job-dependencies.yml` — Job Dependencies and Parallel Execution:**
-   setup downloads wheels and uploads a dependency artifact for 1 day. Smoke
-   and regression jobs depend on setup and run in parallel from offline wheel
-   installation. `download_reports` has both report jobs as dependencies and
-   verifies non-empty downloaded HTML files. Reports retain 7 days.
-
-7. **`Day_04.yml` — Reports/Artifacts/Secrets/Variables:** push/PR/manual,
-   Ubuntu/Python 3.12, full suite, upload an HTML report. Uses repository
-   variable `BASE_URL` and both credential secrets.
-
-8. **`api-tests.yml` — Restful Booker Full API Automation Pipeline:** push/PR
-   targets `main` plus manual dispatch. QA environment, Ubuntu/Python 3.12,
-   Java, and Allure CLI installation. It runs full pytest with Allure and HTML
-   options, verifies report paths, and uploads HTML plus Allure report.
-
-9. **`cron-job.yml` — Nightly API Regression:** cron `30 20 * * *` (20:30 UTC)
-   plus manual dispatch. QA environment, Ubuntu/Python 3.12, regression markers,
-   with no report or artifact upload.
-
-10. **`cross_platform_api_tests.yml` — Python Matrix Strategy:** push/PR,
-    Ubuntu/Windows matrix with Python 3.11/3.12. It runs pytest and uploads
-    reports. Its YAML and report paths should be validated in GitHub before
-    relying on it because the file has unusual leading indentation.
-
-11. **`day3-tests.yml` — Day 3 Smoke and Regression:** push/PR/manual, separate
-    smoke and regression jobs on Ubuntu/Python 3.12. No artifact upload.
-
-12. **`first-sample-run.yml` — First Sample Run:** filtered push/PR, Ubuntu,
-    checkout and test-file listing; no Python setup or test execution.
-
-13. **`full_API_automation_pipeline.yml` — Python Matrix strategy:** push/PR,
-    matrix metadata for Python 3.10/3.11/3.12 but setup and execution are fixed
-    to Python 3.12 on Ubuntu. Uploads HTML and Allure report paths. YAML
-    indentation and actual Allure directory status should be validated.
-
-14. **`main.yml` — Running all API tests:** filtered push/PR/manual, Ubuntu,
-    Python 3.12, hardcoded public `BASE_URL`, credential secrets, full pytest,
-    report checks, and 7-day HTML artifact.
-
-15. **`matrix-tests.yml` — Python Matrix strategy:** push/PR, Ubuntu/Python
-    3.12, full suite, HTML/Allure generation, artifact upload. The file declares
-    no actual matrix variable despite its name.
-
-16. **`pr-validation.yml` — PR Validation:** PR events on `main`, one QA
-    Ubuntu/Python 3.12 smoke job. Generates HTML and uploads it; report
-    generation continues on error.
-
-17. **`python-matrix-strategy.yml` — Python Matrix Strategy – Cross-Platform
-    API Tests:** push/PR, 4 matrix combinations: Ubuntu/Windows × Python
-    3.11/3.12. `fail-fast: false`, QA environment, HTML/Allure results, and
-    named per-combination artifacts for 7 days.
-
-18. **`run-all-tests.yml` — Running all tests:** push/PR/manual, Ubuntu/Python
-    3.12, full suite. Uses a literal public Restful Booker URL and literal demo
-    credentials for test steps, and uploads `report.html` for 7 days.
+Python 3.10–3.12 entries in the manual matrix examples are intended
+configurations, not verified compatibility claims. No run results are asserted
+here. The repository does not currently define a reusable workflow or a
+composite action.
 
 ### CI flow diagram
 
 ```mermaid
 flowchart TD
-    Trigger[Push PR schedule or manual dispatch]
-    Select[Workflow-specific filters and environment]
-    Checkout[actions/checkout]
-    Setup[actions/setup-python]
-    Install[pip install -r requirements.txt]
-    Config[Set variables and secrets]
-    Test[pytest smoke regression or full suite]
-    Report[pytest-html and or Allure]
-    Upload[actions/upload-artifact]
-    Download[Download or verify artifact]
-    Result[GitHub Actions success failure]
+    Trigger[Push or PR matching filters, or manual dispatch]
+    Setup[setup: checkout, Python 3.12, download dependencies]
+    Wheelhouse[Upload dependency artifact]
+    Smoke[smoke_tests: offline install and pytest -m smoke]
+    Regression[regression_tests: offline install and pytest -m regression]
+    SmokeArtifact[Upload smoke HTML report]
+    RegressionArtifact[Upload regression HTML report]
+    Verify[download_reports: download and verify both reports]
+    Result[Workflow result]
+    Learning[Other workflows: manual dispatch only]
 
-    Trigger --> Select --> Checkout --> Setup --> Install --> Config --> Test
-    Test --> Report --> Upload --> Download --> Result
+    Trigger --> Setup --> Wheelhouse
+    Wheelhouse --> Smoke
+    Wheelhouse --> Regression
+    Smoke --> SmokeArtifact
+    Regression --> RegressionArtifact
+    SmokeArtifact --> Verify
+    RegressionArtifact --> Verify
+    Verify --> Result
+    Learning -. separate manual examples .-> Result
 ```
 
 ## CI/CD Execution Evidence
@@ -571,21 +539,20 @@ committed or configured in this repository.
 
 ## End-to-End Execution Flow
 
-For a workflow that runs the full suite:
+For the primary smoke/regression workflow:
 
-1. A push/PR/schedule/manual event starts the selected workflow.
-2. GitHub selects an Ubuntu or Windows runner and QA/repository environment
-   settings where configured.
-3. `actions/checkout` loads the repository.
-4. `actions/setup-python` configures the workflow's Python version.
-5. Requirements are installed.
-6. Environment variables or secrets are mapped to process environment values.
-7. pytest discovers `tests/test_*.py`, creates fixtures, and executes markers or
-   the complete suite.
-8. Helpers call Restful Booker through Playwright and tests validate state.
-9. pytest-html and/or Allure collect report data.
-10. The workflow verifies, uploads, downloads, or displays reports as configured.
-11. GitHub records the workflow result.
+1. A push or pull request matching the path and branch filters starts
+   `06-job-dependencies.yml`; a manual dispatch can also start it.
+2. The Ubuntu setup job downloads Python dependencies and publishes the
+   wheelhouse artifact.
+3. Smoke and regression jobs independently install from that artifact and run
+   their respective pytest markers using GitHub Secrets.
+4. Each job attempts to upload its self-contained pytest-html report even when
+   its tests fail.
+5. The final job downloads both reports and verifies that they are present and
+   non-empty.
+6. GitHub records the job and workflow outcomes. The other workflows run only
+   when manually dispatched.
 
 ## Security and Best Practices
 
@@ -602,12 +569,13 @@ For a workflow that runs the full suite:
 
 - `RestHelper` logs request and response bodies, including possible credentials
   or tokens. Add redaction before logs or reports are shared.
-- Hardcoded demo credentials exist in `run-all-tests.yml`; replace them with
-  repository secrets consistently.
+- Configure the required repository/environment secrets before dispatching
+  workflows; the `run-all-tests.yml` demo credentials have been replaced with
+  secret references.
 - Several workflows use a mix of variables and secrets for `BASE_URL`; standardize
   on one configuration source.
-- Validate malformed YAML in the two indented matrix files and inconsistent
-  Allure report paths before publishing workflows as examples.
+- Verify Allure CLI/report path behavior in the remaining manual examples before
+  relying on their uploaded reports.
 - Add timeout and retry configuration if network reliability becomes a test
   requirement.
 - Document exact repository environment settings when they are created.
@@ -645,7 +613,7 @@ The following are not verified as implemented:
 - Centralized redaction middleware for credentials and tokens.
 - Configurable HTTP timeout/retry settings.
 - Shared JSON-schema validation using `jsonschema`.
-- A single canonical CI pipeline instead of multiple learning workflows.
+- Further curate or retire the manual-only learning workflow examples.
 - Reusable workflow/composite action extraction.
 - Test-data isolation and database-style cleanup for highly parallel runs.
 - Explicit coverage dashboard and category counts.

@@ -2,17 +2,6 @@
 name: Reports_Artifacts_Secrets_Variables
 
 on:
-  push:
-    branches: [main]
-
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - assigned
-    branches: [main]
-
   workflow_dispatch:
 
 jobs:

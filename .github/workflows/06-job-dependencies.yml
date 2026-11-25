@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - "tests/**"
+      - "config/**"
+      - "utils/**"
+      - "test_data/**"
       - "pytest.ini"
       - "requirements.txt"
       - ".github/workflows/06-job-dependencies.yml"
@@ -20,6 +23,9 @@ on:
       - main
     paths:
       - "tests/**"
+      - "config/**"
+      - "utils/**"
+      - "test_data/**"
       - "pytest.ini"
       - "requirements.txt"
       - ".github/workflows/06-job-dependencies.yml"

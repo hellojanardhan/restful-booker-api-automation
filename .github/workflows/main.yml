@@ -2,28 +2,6 @@
 name: Running all API tests
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'tests/**'
-      - 'config/**'
-      - 'requirements.txt'
-      - 'pytest.ini'
-      - '.github/workflows/**'
-
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-    paths:
-      - 'tests/**'
-      - 'config/**'
-      - 'requirements.txt'
-      - 'pytest.ini'
-      - '.github/workflows/**'
-
   workflow_dispatch:
 
 jobs:

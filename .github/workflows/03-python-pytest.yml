@@ -2,43 +2,8 @@
 # Name of the GitHub Actions workflow
 name: Python Pytest CI Pipeline
 
-# Configure workflow execution triggers
 on:
-
-    # Trigger workflow when code is pushed to main
-    push:
-        branches:
-            - main
-
-        # Execute only when the specified files or folders change
-        paths:
-            - 'tests/**'
-            - 'pytest.ini'
-            - 'requirements.txt'
-            - '.github/workflows/03-python-pytest.yml'
-
-    # Trigger workflow when a Pull Request targets main
-    pull_request:
-
-        # Specify Pull Request activity types
-        types:
-            - opened
-            - synchronize
-            - reopened
-
-        # Execute only when the specified files change
-        paths:
-            - 'tests/**'
-            - 'pytest.ini'
-            - 'requirements.txt'
-            - '.github/workflows/03-python-pytest.yml'
-
-        # Target branch for Pull Requests
-        branches:
-            - main
-
-    # Allow manual execution from GitHub Actions
-    workflow_dispatch:
+  workflow_dispatch:
 
 # Define jobs to be executed in this workflow
 jobs:

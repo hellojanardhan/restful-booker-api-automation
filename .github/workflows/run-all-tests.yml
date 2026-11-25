@@ -1,16 +1,6 @@
 name: Running all tests
 
 on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-
   workflow_dispatch:
 
 jobs:
@@ -35,8 +25,8 @@ jobs:
 
       - name: Verify environment variables
         env:
-          BOOKER_USERNAME: 'admin'
-          BOOKER_PASSWORD: 'password123'
+          BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+          BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
         run: |
           python -c "import os; print('BASE_URL:', bool(os.getenv('BASE_URL')))"
           python -c "import os; print('USERNAME:', bool(os.getenv('BOOKER_USERNAME')))"
@@ -48,8 +38,8 @@ jobs:
       - name: Run all tests
         env:
           BASE_URL: 'https://restful-booker.herokuapp.com'
-          BOOKER_USERNAME: 'admin'
-          BOOKER_PASSWORD: 'password123'
+          BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+          BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
         run: |
           pytest -v --html="$GITHUB_WORKSPACE/report.html" --self-contained-html
 

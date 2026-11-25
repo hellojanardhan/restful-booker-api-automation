@@ -2,13 +2,7 @@
 name: PR Validation
 
 on:
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
+  workflow_dispatch:
 
 jobs:
   smoke_tests:

@@ -1,17 +1,10 @@
-name: Python Matrix strategy
+name: Ubuntu Python 3.12 API Tests
 on:
-  push:
-    branches: [main]
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   matrix_tests:
-    name: Running API Tests 
+    name: Running API Tests
     runs-on: ubuntu-latest
     environment: QA
     timeout-minutes: 20
