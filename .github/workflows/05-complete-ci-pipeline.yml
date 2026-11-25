@@ -1,0 +1,112 @@
+# Workflow name
+name: Complete CI Pipeline
+
+# Configure workflow event triggers
+on:
+  # Trigger workflow when code is pushed to main
+  push:
+    branches:
+      - main
+    paths:
+      - "tests/**"
+      - "pytest.ini"
+      - "requirements.txt"
+      - ".github/workflows/05-complete-ci-pipeline.yml"
+
+  # Trigger workflow when a pull request targets main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+    paths:
+      - "tests/**"
+      - "pytest.ini"
+      - "requirements.txt"
+      - ".github/workflows/05-complete-ci-pipeline.yml"
+
+# Configure CI pipeline jobs
+jobs:
+  ci-pipeline:
+    # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+
+    # Configure environment variables using GitHub Secrets
+    env:
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BOOKER_USERNAME: ${{ secrets.BOOKER_USERNAME }}
+      BOOKER_PASSWORD: ${{ secrets.BOOKER_PASSWORD }}
+
+    steps:
+      # Checkout repository code
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Configure Python 3.12
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Upgrade pip and install project dependencies
+      - name: Install Dependencies
+        id: install_dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Execute smoke tests and generate an HTML report
+      - name: Run Smoke Tests
+        run: |
+          mkdir -p reports
+          pytest -m smoke -v --html=reports/smoke-report.html --self-contained-html
+
+      # Execute regression tests and generate an HTML report
+      # Run regression tests if dependency installation succeeded,
+      # even if smoke tests failed
+      - name: Run Regression Tests
+        if: ${{ steps.install_dependencies.outcome == 'success' }}
+        run: |
+          mkdir -p reports
+          pytest -m regression -v --html=reports/regression-report.html --self-contained-html
+
+      # Upload available HTML reports as a GitHub Actions artifact
+      # Run this step even if an earlier test step fails
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-html-report
+          path: reports/*.html
+          retention-days: 7
+
+      # Download the uploaded artifact from the same workflow run
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          name: pytest-html-report
+          path: downloaded-artifacts
+
+      # Verify that both downloaded HTML reports exist and are not empty
+      - name: Verify Downloaded Reports
+        if: always()
+        run: |
+          # Check whether both HTML reports exist and contain data
+          if [ -s downloaded-artifacts/smoke-report.html ] && [ -s downloaded-artifacts/regression-report.html ]; then
+
+            # Print success message
+            echo "SUCCESS: Both HTML reports downloaded successfully"
+
+            # Display downloaded report files and their sizes
+            ls -lh downloaded-artifacts/
+
+          else
+            # Print error message if either report is missing or empty
+            echo "ERROR: One or both HTML reports are missing or empty"
+
+            # Fail the verification step
+            exit 1
+          fi
