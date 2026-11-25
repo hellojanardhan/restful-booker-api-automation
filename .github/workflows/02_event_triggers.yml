@@ -1,0 +1,48 @@
+name: Event Triggers
+on:
+    push:
+        branches: 
+            - main
+        paths:
+            - 'tests/**'
+            - 'pytest.ini'
+            - 'requirements.txt'
+            - '.github/workflows/02_event_triggers.yml'        
+    pull_request:
+            types:
+                - opened
+                - synchronize
+                - reopened
+            branches:
+                - main
+            paths:
+                - 'tests/**'
+                - 'pytest.ini'
+                - 'requirements.txt'
+                - '.github/workflows/02_event_triggers.yml'    
+    workflow_dispatch:
+
+
+jobs:
+    event_triggers:
+        name: Using Ubuntu Latest GitHub-hosted Runner
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+            
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: '3.12'
+
+            - name: Install Dependencies
+              run: |
+                pip install --upgrade pip
+                pip install -r requirements.txt
+            
+            - name: Run API tests
+              run: pytest -v
+        
+            
