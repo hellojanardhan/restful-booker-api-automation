@@ -4,30 +4,36 @@ pipeline {
 
     stages {
 
-        stage('Welcome') {
+        stage('Parallel Testing') {
 
-            steps {
+            parallel {
 
-                echo 'Welcome to Jenkins Pipeline'
+                stage('API Tests') {
 
-            }
-        }
+                    steps {
 
-        stage('Python Version') {
+                        echo 'Executing API tests'
 
-            steps {
+                    }
+                }
 
-                bat 'python --version'
+                stage('UI Tests') {
 
-            }
-        }
+                    steps {
 
-        stage('Execute Python') {
+                        echo 'Executing UI tests'
 
-            steps {
+                    }
+                }
 
-                bat 'python -c "print(\'Hello from Jenkinsfile\')"'
+                stage('Integration Tests') {
 
+                    steps {
+
+                        echo 'Executing integration tests'
+
+                    }
+                }
             }
         }
     }
