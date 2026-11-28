@@ -19,6 +19,10 @@ pipeline {
         )
     }
 
+    environment {
+        BASE_URL = 'http://restful-booker.herokuapp.com'
+    }
+
     stages {
 
         stage('Checkout') {
