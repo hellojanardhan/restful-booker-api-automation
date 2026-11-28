@@ -1,97 +1,127 @@
+
 pipeline {
+
     agent any
 
     options {
         timestamps()
     }
 
+    triggers {
+        cron('H 2 * * *')
+    }
+
     parameters {
         choice(
             name: 'TEST_SUITE',
-            choices: [
-                'functional',
-                'negative',
-                'security',
-                'create_booking',
-                'booking_collection',
-                'ping',
-                'smoke',
-                'regression',
-                'partial_update',
-                'update_booking',
-                'delete_booking',
-                'e2e'
-            ]
+            choices: ['create_booking', 'regression', 'update_booking'],
+            description: 'Select API test suite'
         )
-    }
-    environment {
-        BASE_URL = 'http://restful-booker.herokuapp.com'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                echo 'Checking out API automation framework'
+                echo 'Checking out API Automation Framework'
                 checkout scm
             }
         }
-        stage('Setup Python') {
+
+        stage('Python Setup') {
             steps {
-                echo 'Checking Python version'
-                bat 'python --version'
                 bat '''
-                if not exist .venv (
-                    python -m venv .venv
-                )
+                    if not exist .venv (
+                        python -m venv .venv
+                    )
                 '''
             }
         }
 
-        stage('Install dependencies') {
+        stage('Install Dependencies') {
             steps {
                 bat '''
-                .venv\\Scripts\\python.exe -m pip install --upgrade pip
-                .venv\\Scripts\\python.exe -m pip install -r requirements.txt
+                    .venv\\Scripts\\python.exe -m pip install --upgrade pip
+
+                    .venv\\Scripts\\python.exe -m pip install -r requirements.txt
                 '''
             }
         }
+
         stage('Execute API Tests') {
+
             steps {
+
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'booker-api_credentials',
+                        credentialsId: 'booker-api-credentials',
                         usernameVariable: 'BOOKER_USERNAME',
                         passwordVariable: 'BOOKER_PASSWORD'
                     )
                 ]) {
-                    bat """
-                    if not exist reports mkdir reports
-                    .venv\\Scripts\\python.exe -m pytest -m "${params.TEST_SUITE}" --html=reports/report.html --self-contained-html --junitxml=reports/junit.xml
-                    """
+
+                    script {
+
+                        def pytestArgs = ''
+
+                        if (params.TEST_SUITE == 'regression') {
+                            pytestArgs = ''
+                        }
+
+                        else if (params.TEST_SUITE == 'create_booking') {
+                            pytestArgs = '-m create_booking'
+                        }
+
+                        else if (params.TEST_SUITE == 'update_booking') {
+                            pytestArgs = '-m update_booking'
+                        }
+
+                        bat """
+                            if not exist reports mkdir reports
+
+                            .venv\\Scripts\\python.exe -m pytest ${pytestArgs} ^
+                            --html=reports/report.html ^
+                            --self-contained-html ^
+                            --junitxml=reports/junit.xml
+                        """
+                    }
                 }
             }
         }
     }
+
     post {
+
         always {
+
             junit(
                 testResults: 'reports/junit.xml',
                 allowEmptyResults: true
             )
 
+            publishHTML(target: [
+                reportName: 'API Automation Report',
+                reportDir: 'reports',
+                reportFiles: 'report.html',
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                allowMissing: true
+            ])
+
             archiveArtifacts(
                 artifacts: 'reports/**',
                 allowEmptyArchive: true
             )
+
             echo 'API Automation execution completed'
         }
 
         success {
-            echo 'API Automation successfully completed'
+            echo 'API Automation passed successfully'
         }
 
         failure {
-            echo 'API Automation execution failed'
+            echo 'API Automation failed'
         }
     }
 }
